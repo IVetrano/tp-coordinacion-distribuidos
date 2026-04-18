@@ -24,35 +24,46 @@ class SumFilter:
                 MOM_HOST, AGGREGATION_PREFIX, [f"{AGGREGATION_PREFIX}_{i}"]
             )
             self.data_output_exchanges.append(data_output_exchange)
-        self.amount_by_fruit = {}
+        self.amount_by_fruit_by_client = {}
 
-    def _process_data(self, fruit, amount):
+    def _process_data(self, client_id, fruit, amount):
         logging.info(f"Process data")
-        self.amount_by_fruit[fruit] = self.amount_by_fruit.get(
+        if client_id not in self.amount_by_fruit_by_client:
+            self.amount_by_fruit_by_client[client_id] = {}
+        self.amount_by_fruit_by_client[client_id][fruit] = self.amount_by_fruit_by_client[client_id].get(
             fruit, fruit_item.FruitItem(fruit, 0)
         ) + fruit_item.FruitItem(fruit, int(amount))
 
-    def _process_eof(self):
+    def _process_eof(self, client_id):
         logging.info(f"Broadcasting data messages")
-        for final_fruit_item in self.amount_by_fruit.values():
+        for final_fruit_item in self.amount_by_fruit_by_client.get(client_id, {}).values():
             for data_output_exchange in self.data_output_exchanges:
                 data_output_exchange.send(
                     message_protocol.internal.serialize(
-                        [final_fruit_item.fruit, final_fruit_item.amount]
+                        ["DATA", client_id, final_fruit_item.fruit, final_fruit_item.amount]
                     )
                 )
 
         logging.info(f"Broadcasting EOF message")
         for data_output_exchange in self.data_output_exchanges:
-            data_output_exchange.send(message_protocol.internal.serialize([]))
+            data_output_exchange.send(message_protocol.internal.serialize(["EOF", client_id]))
 
 
     def process_data_messsage(self, message, ack, nack):
         fields = message_protocol.internal.deserialize(message)
-        if len(fields) == 2:
-            self._process_data(*fields)
+        msg_type = fields[0]
+
+        if msg_type == "DATA":
+            _, client_id, fruit, amount = fields
+            self._process_data(client_id, fruit, amount)
+        elif msg_type == "EOF":
+            _, client_id = fields
+            self._process_eof(client_id)
         else:
-            self._process_eof(*fields)
+            logging.error(f"Unknown message type: {msg_type}")
+            nack()
+            return
+
         ack()
 
     def start(self):
