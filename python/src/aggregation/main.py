@@ -1,6 +1,5 @@
 import os
 import logging
-import bisect
 
 from common import middleware, message_protocol, fruit_item
 
@@ -45,9 +44,11 @@ class AggregationFilter:
 
         self.output_queue.send(
             message_protocol.internal.serialize(
-                message_protocol.internal.PARTIAL_TOP_MESSAGE_TYPE,
-                client_id,
-                fruit_top
+                [
+                    message_protocol.internal.TOP_MESSAGE_TYPE,
+                    client_id,
+                    fruit_top
+                ]
             )
         )
         self.amount_by_fruit_by_client.pop(client_id, None)

@@ -28,5 +28,14 @@ class MessageHandler:
         )
 
     def deserialize_result_message(self, message):
-        fields = message_protocol.internal.deserialize(message)
-        return fields
+        msg_type, client_id, fruit_top = message_protocol.internal.deserialize(message)
+
+        if msg_type != message_protocol.internal.TOP_MESSAGE_TYPE:
+            print(f"Received unexpected message type: {msg_type}")
+            return None
+
+        if client_id != self.client_id:
+            print(f"Received message for different client: {client_id}")
+            return None
+
+        return fruit_top
