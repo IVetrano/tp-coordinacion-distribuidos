@@ -1,5 +1,8 @@
 import json
 
+DATA_MESSAGE_TYPE = "DATA"
+EOF_MESSAGE_TYPE = "EOF"
+PARTIAL_TOP_MESSAGE_TYPE = "PARTIAL_TOP"
 
 def serialize(message):
     return json.dumps(message).encode("utf-8")
