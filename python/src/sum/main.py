@@ -54,7 +54,7 @@ class SumFilter:
 
     def _process_eof(self, client_id):
         with self.lock:
-            client_totals = self.amount_by_fruit_by_client.get(client_id, {})
+            client_totals = self.amount_by_fruit_by_client.pop(client_id, {})
 
         logging.info(f"Broadcasting data messages")
         for final_fruit_item in client_totals.values():
