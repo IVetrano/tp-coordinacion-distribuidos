@@ -1,5 +1,6 @@
 import os
 import logging
+import signal
 
 from common import middleware, message_protocol, fruit_item
 
@@ -23,6 +24,7 @@ class AggregationFilter:
             MOM_HOST, OUTPUT_QUEUE
         )
         self.amount_by_fruit_by_client = {}
+        self.sum_eof_received_by_client = {}
 
     def _process_data(self, client_id, fruit, amount):
         logging.info("Processing data message")
@@ -34,6 +36,14 @@ class AggregationFilter:
 
     def _process_eof(self, client_id):
         logging.info("Received EOF")
+        self.sum_eof_received_by_client[client_id] = self.sum_eof_received_by_client.get(client_id, 0) + 1
+
+
+        if self.sum_eof_received_by_client[client_id] < SUM_AMOUNT:
+            logging.info(f"EOF messages for client {client_id}: {self.sum_eof_received_by_client[client_id]}/{SUM_AMOUNT}")
+            return
+        logging.info(f"All EOF messages received for client {client_id}. Computing top fruits.")
+
         fruit_top = []
 
         client_totals = self.amount_by_fruit_by_client.get(client_id)
@@ -52,6 +62,7 @@ class AggregationFilter:
             )
         )
         self.amount_by_fruit_by_client.pop(client_id, None)
+        self.sum_eof_received_by_client.pop(client_id, None)
 
     def process_messsage(self, message, ack, nack):
         logging.info("Process message")
@@ -73,11 +84,23 @@ class AggregationFilter:
 
     def start(self):
         self.input_exchange.start_consuming(self.process_messsage)
+        self.output_queue.close()
+        self.input_exchange.close()
+    
+    def stop(self):
+        logging.info("Stopping AggregationFilter")
+        self.input_exchange.stop_consuming()
 
 
 def main():
     logging.basicConfig(level=logging.INFO)
     aggregation_filter = AggregationFilter()
+
+    def sigterm_handler(signum, frame):
+        aggregation_filter.stop()
+
+    signal.signal(signal.SIGTERM, sigterm_handler)
+
     aggregation_filter.start()
     return 0
 
