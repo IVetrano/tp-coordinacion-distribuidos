@@ -79,7 +79,3 @@ Al momento de la evaluación y ejecución de las pruebas se **descartarán** o *
 - La implementación del protocolo de comunicación externo y `FruitItem`.
 
 Redactar un breve informe explicando el modo en que se coordinan las instancias de Sum y Aggregation, así como el modo en el que el sistema escala respecto a los clientes y a la cantidad de controles.
-
-## Cosas a recordar cuando escriba el informe:
-- Se decidio cambiar la lista de fruit_top en el aggregator a un diccionario y ordenar los valores al recibir EOF para alivianar el `_process_data`, esto puede causar picos de procesamiento en el `_process_eof`.
-- Se optó por utilizar MD5 como función de hash debido a que provee una distribución uniforme y determinística entre instancias, evitando el costo computacional innecesario de funciones criptográficas más robustas como SHA-256.
